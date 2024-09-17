@@ -111,12 +111,24 @@ void show_keys(void);     // demonstrate get_key_event()
 //============================================================================
 // Write the Timer 7 ISR here.  Be sure to give it the right name.
 
+void TIM7_IRQHandler() {
+  TIM7->SR &= ~TIM_SR_UIF;
+  int rows = read_rows();
+  update_history(col, rows);
+  col = (col + 1) & 3;
+  drive_column(col);
+}
 
 //============================================================================
 // init_tim7()
 //============================================================================
 void init_tim7(void) {
-
+  RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
+  TIM7->PSC = 4800-1;
+  TIM7->ARR = 10-1;
+  TIM7->DIER |= TIM_DIER_UIE;
+  NVIC->ISER[0] |= (1 << 18);
+  TIM7->CR1 |= TIM_CR1_CEN;
 }
 
 //=============================================================================
@@ -128,7 +140,7 @@ uint32_t volume = 2048;
 // setup_adc()
 //============================================================================
 void setup_adc(void) {
-
+  //  RCC->APB1ENR |=
 }
 
 //============================================================================
@@ -233,7 +245,7 @@ int main(void) {
     msg[7] |= font[' '];
 
     // Uncomment when you are ready to produce a confirmation code.
-    //autotest();
+    autotest();
 
     enable_ports();
     setup_dma();
@@ -242,10 +254,10 @@ int main(void) {
 
     // Comment this for-loop before you demo part 1!
     // Uncomment this loop to see if "ECE 362" is displayed on LEDs.
-    // for (;;) {
-    //     asm("wfi");
-    // }
-    // End of for loop
+    //for (;;) {
+       //  asm("wfi");
+     //}
+    //End of for loop
 
     // Demonstrate part 1
  #define SCROLL_DISPLAY
