@@ -12,7 +12,7 @@
 
 // Fill out your username, otherwise your completion code will have the 
 // wrong username!
-const char* username = "username";
+const char* username = "jwmacdou";
 
 /******************************************************************************
 */ 
@@ -44,18 +44,38 @@ void printfloat(float f);
 // enable_ports()
 //============================================================================
 void enable_ports(void) {
-    
+    RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
+    RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+    GPIOB->MODER &= ~0x3FFFFF;
+    GPIOB->MODER |= 0x155555;
+    GPIOC->OTYPER |= 0b1111<<4;
+    GPIOC->MODER &= ~0xFFFF;
+    GPIOC->MODER |= 0b01<<14;
+    GPIOC->MODER |= 0b01<<12;
+    GPIOC->MODER |= 0b01<<10;
+    GPIOC->MODER |= 0b01<<8;
+    GPIOC->PUPDR |= 0b01;
+    GPIOC->PUPDR |= 0b01<<2;
+    GPIOC->PUPDR |= 0b01<<4;
+    GPIOC->PUPDR |= 0b01<<6;
 }
 
 //============================================================================
 // setup_dma() + enable_dma()
 //============================================================================
 void setup_dma(void) {
-    
+    DMA1_Channel5->CMAR = 
+    DMA1_Channel5->CPAR =
+    DMA1_Channel5->CNDTR = 8;
+    DMA1_Channel5->CCR |= 0b1<<4;
+    DMA1_Channel5->CCR |= 0b1<<7;
+    DMA1_Channel5->CCR |= 0b01<<10;
+    DMA1_Channel5->CCR |= 0b01<<8;
+    DMA1_Channel5->CCR |= 0b1<<5;
 }
 
 void enable_dma(void) {
-    
+    DMA1_Channel5->CCR |= 0b1;
 }
 
 //============================================================================
@@ -206,7 +226,7 @@ int main(void) {
     msg[7] |= font[' '];
 
     // Uncomment when you are ready to produce a confirmation code.
-    // autotest();
+    autotest();
 
     enable_ports();
     setup_dma();
