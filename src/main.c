@@ -64,8 +64,10 @@ void enable_ports(void) {
 // setup_dma() + enable_dma()
 //============================================================================
 void setup_dma(void) {
-    DMA1_Channel5->CMAR = 
-    DMA1_Channel5->CPAR =
+    RCC->AHBENR |= RCC_AHBENR_DMAEN;
+    DMA1_Channel1->CCR &= ~0b1;
+    DMA1_Channel5->CMAR = (uint32_t) msg;
+    DMA1_Channel5->CPAR = (uint32_t) &(GPIOB->ODR);
     DMA1_Channel5->CNDTR = 8;
     DMA1_Channel5->CCR |= 0b1<<4;
     DMA1_Channel5->CCR |= 0b1<<7;
@@ -82,7 +84,12 @@ void enable_dma(void) {
 // init_tim15()
 //============================================================================
 void init_tim15(void) {
-
+   RCC->APB2ENR |= RCC_APB2ENR_TIM15EN;
+   TIM15->PSC = 4800-1;
+   TIM15->ARR = 10-1;
+   TIM15->DIER |= TIM_DIER_UDE;
+   NVIC->ISER[0] |= (1 << 18);
+   TIM15->CR1 |= TIM_CR1_CEN;
 }
 
 //=============================================================================
@@ -226,7 +233,7 @@ int main(void) {
     msg[7] |= font[' '];
 
     // Uncomment when you are ready to produce a confirmation code.
-    autotest();
+    //autotest();
 
     enable_ports();
     setup_dma();
@@ -235,13 +242,13 @@ int main(void) {
 
     // Comment this for-loop before you demo part 1!
     // Uncomment this loop to see if "ECE 362" is displayed on LEDs.
-    for (;;) {
-        asm("wfi");
-    }
+    // for (;;) {
+    //     asm("wfi");
+    // }
     // End of for loop
 
     // Demonstrate part 1
-// #define SCROLL_DISPLAY
+ #define SCROLL_DISPLAY
 #ifdef SCROLL_DISPLAY
     for(;;)
         for(int i=0; i<8; i++) {
