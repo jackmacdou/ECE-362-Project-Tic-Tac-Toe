@@ -140,7 +140,22 @@ uint32_t volume = 2048;
 // setup_adc()
 //============================================================================
 void setup_adc(void) {
-  //  RCC->APB1ENR |=
+  RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+  //configure adc_in1 analog mode
+  GPIOA->MODER |= 0b11<<2;
+  RCC->APB2ENR |= RCC_APB2ENR_ADCEN;
+  //RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
+  RCC->CR2 |= RCC_CR2_HSI14ON;
+  while ((RCC->CR2 & RCC_CR2_HSI14RDY) == 0);
+  ADC1->CR |= ADC_CR_ADEN;
+  while ((ADC1->ISR & ADC_ISR_ADRDY) == 0){
+
+  } 
+  ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
+  while ((ADC1->ISR & ADC_ISR_ADRDY) == 0){
+
+  } 
+  
 }
 
 //============================================================================
@@ -156,13 +171,31 @@ int bcn = 0;
 //============================================================================
 // Write the Timer 2 ISR here.  Be sure to give it the right name.
 
+void TIM2_IRQHandler() {
+  TIM2->SR &= ~TIM_SR_UIF;
+  ADC1->CR |= ADC_CR_ADSTART;
+  while ((ADC1->ISR & ADC_ISR_EOC) == 0){
 
+  } 
+  bcsum -= boxcar[bcn];
+  bcsum += boxcar[bcn] = ADC1->DR;
+  bcn += 1;
+  if (bcn >= BCSIZE){
+    bcn = 0;
+  }
+  volume = bcsum / BCSIZE;
+}
 
 //============================================================================
 // init_tim2()
 //============================================================================
 void init_tim2(void) {
-    
+  RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+  TIM2->PSC = 4800-1;
+  TIM2->ARR = 1000-1;
+  TIM2->DIER |= TIM_DIER_UIE;
+  NVIC->ISER[0] |= (1 << 15);
+  TIM2->CR1 |= TIM_CR1_CEN;
 }
 
 
