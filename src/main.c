@@ -247,19 +247,47 @@ void set_freq(int chan, float f) {
 // setup_dac()
 //============================================================================
 void setup_dac(void) {
-
+  RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+  GPIOA->MODER |= 0b11<<8;
+  RCC->APB1ENR |= RCC_APB1ENR_DACEN;
+  DAC->CR &= ~DAC_CR_TSEL1;
+  DAC->CR |= DAC_CR_TEN1;
+  DAC->CR |= DAC_CR_EN1;
 }
 
 //============================================================================
 // Timer 6 ISR
 //============================================================================
 // Write the Timer 6 ISR here.  Be sure to give it the right name.
-
+void TIM6_DAC_IRQHandler() {
+  TIM6->SR &= ~TIM_SR_UIF;
+  offset0 = offset0 + step0;
+  offset1 = offset1 + step1;
+  if (offset0 >= (N<<16)){
+    offset0 = offset0 - (N<<16);
+  }
+  if (offset1 >= (N<<16)){
+    offset1 = offset1 - (N<<16);
+  }
+  int samp = wavetable[offset0>>16] + wavetable[offset1>>16];
+  samp = samp * volume;
+  samp = samp >> 17;
+  samp = samp + 2048;
+  DAC->DHR12R1 = samp;
+  //copy samp to DAC->DHR12R1
+}
 //============================================================================
 // init_tim6()
 //============================================================================
 void init_tim6(void) {
-
+  //(PSC+1)(ARR+1) = clock_f/goal_f
+  RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
+  TIM6->PSC = 480-1;
+  TIM6->ARR = (48000000/(TIM6->PSC+1))/RATE - 1;
+  TIM6->DIER |= TIM_DIER_UIE;
+  NVIC->ISER[0] |= (1 << 17);
+  TIM6->CR1 |= TIM_CR1_CEN;
+  TIM6->CR2 |= TIM_CR2_MMS_1;
 }
 
 //============================================================================
