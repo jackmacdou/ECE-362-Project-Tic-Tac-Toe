@@ -72,6 +72,7 @@ void print(const char str[])
 
 void printfloat(float f)
 {
+    printf("here\n");
     char buf[10];
     snprintf(buf, 10, "%f", f);
     for(int i=1; i<10; i++) {

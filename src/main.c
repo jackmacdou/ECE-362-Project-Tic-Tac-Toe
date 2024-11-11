@@ -143,6 +143,9 @@ void setup_adc(void) {
   RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
   //configure adc_in1 analog mode
   GPIOA->MODER |= 0b11<<2;
+  GPIOA->MODER |= 0b11<<4;
+  GPIOA->MODER |= 0b11<<6;
+  GPIOA->MODER |= 0b11<<10;
   RCC->APB2ENR |= RCC_APB2ENR_ADCEN;
   //RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
   RCC->CR2 |= RCC_CR2_HSI14ON;
@@ -152,6 +155,9 @@ void setup_adc(void) {
 
   } 
   ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
+  ADC1->CHSELR |= ADC_CHSELR_CHSEL2;
+  ADC1->CHSELR |= ADC_CHSELR_CHSEL3;
+  ADC1->CHSELR |= ADC_CHSELR_CHSEL6;
   while ((ADC1->ISR & ADC_ISR_ADRDY) == 0){
 
   } 
@@ -294,6 +300,7 @@ void init_tim6(void) {
 // All the things you need to test your subroutines.
 //============================================================================
 int main(void) {
+    // printf("here\n");
     internal_clock();
     // Initialize the display to something interesting to get started.
     msg[0] |= font['E'];
@@ -304,7 +311,7 @@ int main(void) {
     msg[5] |= font['6'];
     msg[6] |= font['2'];
     msg[7] |= font[' '];
-
+    // printf("here\n");
     // Uncomment when you are ready to produce a confirmation code.
     autotest();
 
@@ -316,12 +323,12 @@ int main(void) {
     // Comment this for-loop before you demo part 1!
     // Uncomment this loop to see if "ECE 362" is displayed on LEDs.
     //for (;;) {
-       //  asm("wfi");
+        // asm("wfi");
      //}
     //End of for loop
 
     // Demonstrate part 1
- #define SCROLL_DISPLAY
+  //#define SCROLL_DISPLAY
 #ifdef SCROLL_DISPLAY
     for(;;)
         for(int i=0; i<8; i++) {
@@ -333,7 +340,7 @@ int main(void) {
     init_tim7();
 
     // Demonstrate part 2
-// #define SHOW_KEY_EVENTS
+//#define SHOW_KEY_EVENTS
 #ifdef SHOW_KEY_EVENTS
     show_keys();
 #endif
@@ -342,11 +349,27 @@ int main(void) {
     init_tim2();
 
     // Demonstrate part 3
-// #define SHOW_VOLTAGE
+#define SHOW_VOLTAGE
 #ifdef SHOW_VOLTAGE
     for(;;) {
         printfloat(2.95 * volume / 4096);
     }
+#endif
+
+#define UDLR
+#ifdef UDLR
+  for(;;){
+    if (2.95*volume/4096 >= 1.6){
+      print("0000DOWN");
+      //volume = volume - 0;
+    }
+    else if (2.95*volume/4096 <= 1.3){
+      print("0000UP");
+    }
+    else{
+      print("0000NEUT");
+    }
+  }
 #endif
 
     init_wavetable();
@@ -374,5 +397,5 @@ int main(void) {
 #endif
 
     // Have fun.
-    dialer();
+    //dialer();
 }
