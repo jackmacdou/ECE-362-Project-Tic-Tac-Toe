@@ -139,6 +139,7 @@ uint32_t volume = 2048;
 //============================================================================
 // setup_adc()
 //============================================================================
+//int i = 0;
 void setup_adc(void) {
   RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
   //configure adc_in1 analog mode
@@ -153,11 +154,11 @@ void setup_adc(void) {
   ADC1->CR |= ADC_CR_ADEN;
   while ((ADC1->ISR & ADC_ISR_ADRDY) == 0){
 
-  } 
-  ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
+  }
+  /*ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
   ADC1->CHSELR |= ADC_CHSELR_CHSEL2;
   ADC1->CHSELR |= ADC_CHSELR_CHSEL3;
-  ADC1->CHSELR |= ADC_CHSELR_CHSEL6;
+  ADC1->CHSELR |= ADC_CHSELR_CHSEL6;*/
   while ((ADC1->ISR & ADC_ISR_ADRDY) == 0){
 
   } 
@@ -176,11 +177,11 @@ int bcn = 0;
 // Timer 2 ISR
 //============================================================================
 // Write the Timer 2 ISR here.  Be sure to give it the right name.
-
+int i = 0;
 void TIM2_IRQHandler() {
   TIM2->SR &= ~TIM_SR_UIF;
   ADC1->CR |= ADC_CR_ADSTART;
-  while ((ADC1->ISR & ADC_ISR_EOC) == 0){
+  /*while ((ADC1->ISR & ADC_ISR_EOC) == 0){
 
   } 
   bcsum -= boxcar[bcn];
@@ -188,8 +189,47 @@ void TIM2_IRQHandler() {
   bcn += 1;
   if (bcn >= BCSIZE){
     bcn = 0;
-  }
-  volume = bcsum / BCSIZE;
+  }*/
+  //volume = bcsum / BCSIZE;
+  /*while ((ADC1->ISR & ADC_ISR_EOC)==0){
+    if (i = 0){
+      ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
+      volume = (ADC1->DR);
+      while ((ADC1->ISR & ADC_ISR_ADRDY) == 0){
+
+      } 
+    }
+    else if (i = 1){
+      ADC1->CHSELR |= ADC_CHSELR_CHSEL2;
+      volume = (ADC1->DR);
+      while ((ADC1->ISR & ADC_ISR_ADRDY) == 0){
+
+      } 
+    }
+    i++;
+    if (i == 2){
+      i = 0;
+    }*/
+    volume = (ADC1->DR);
+    //uord1 = (ADC1->DR);
+  //lorr1 =
+    //ADC1->CR &= ~ADC_CR_ADSTART; 
+    //ADC1->CR &= ~ADC_CR_ADEN;
+    //ADC1->CR |= ADC_CR_ADEN;
+    //while ((ADC1->ISR & ADC_ISR_ADRDY) == 0);
+    //ADC1->CHSELR |= ADC_CHSELR_CHSEL2;
+    //ADC1->CHSELR &= ~ADC_CHSELR_CHSEL2;
+    //while ((ADC1->ISR & ADC_ISR_ADRDY) == 0){
+    //} 
+    //ADC1->CR |= ADC_CR_ADSTART;
+    //ADC1->CR |= ADC_CR_ADSTART;
+    //ADC1->CHSELR |= ADC_CHSELR_CHSEL3;
+    //ADC1->CHSELR |= ADC_CHSELR_CHSEL6; 
+  //}
+  //ADC1->CHSELR |= ADC_CHSELR_CHSEL2;
+  //ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
+  //ADC1->CHSELR &= ~ADC_CHSELR_CHSEL1;
+
 }
 
 //============================================================================
@@ -313,7 +353,7 @@ int main(void) {
     msg[7] |= font[' '];
     // printf("here\n");
     // Uncomment when you are ready to produce a confirmation code.
-    autotest();
+    //autotest();
 
     enable_ports();
     setup_dma();
@@ -349,26 +389,114 @@ int main(void) {
     init_tim2();
 
     // Demonstrate part 3
-#define SHOW_VOLTAGE
+//#define SHOW_VOLTAGE
 #ifdef SHOW_VOLTAGE
     for(;;) {
-        printfloat(2.95 * volume / 4096);
+        printfloat((2.95 * volume / 4096)/10000);
     }
 #endif
-
+uint32_t uord1 = 2048;
+uint32_t lorr1 = 2048;
+uint32_t uord2 = 2048;
+uint32_t lorr2 = 2048;
+uint32_t uord1prev = 0;
+uint32_t lorr1prev = 0;
+uint32_t uord2prev = 0;
 #define UDLR
 #ifdef UDLR
+  //volume = 1.3;
+  //ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
   for(;;){
-    if (2.95*volume/4096 >= 1.6){
-      print("0000DOWN");
+    //ADC1->CR &= ~ADC_CR_ADDIS;
+    //ADC1->CR &= ~ADC_CR_ADSTART;
+    //ADC1->CR |= ADC_CR_ADSTART;
+    ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
+    ADC1->CHSELR |= ADC_CHSELR_CHSEL2;
+    ADC1->CHSELR |= ADC_CHSELR_CHSEL3;
+    ADC1->CHSELR |= ADC_CHSELR_CHSEL6;
+    nano_wait(100000000);
+    while ((ADC1->ISR & ADC_ISR_ADRDY) == 0); 
+    //ADC1->DR &= 0b0;
+    while (ADC1->DR == 0);
+    //uord1 = uord1prev;
+    uord1 = (ADC1->DR);
+    if (2.95*uord1/4096 >= 1.9){
+      print1("U");
       //volume = volume - 0;
     }
-    else if (2.95*volume/4096 <= 1.3){
-      print("0000UP");
+    else if (2.95*uord1/4096 <= 0.8){
+      print1("D");
     }
     else{
-      print("0000NEUT");
+      print1("N");
     }
+    //uord1prev = uord1;
+    //uord1 = 0;
+    ADC1->CHSELR &= ~ADC_CHSELR_CHSEL1;
+    //ADC1->CR |= ADC_CR_ADDIS;
+    //ADC1->CR &= ~ADC_CR_ADSTART;
+    //ADC1->CR |= ADC_CR_ADSTART;
+    nano_wait(100000000);
+    //ADC1->CR &= ~ADC_CR_ADDIS;
+    while ((ADC1->ISR & ADC_ISR_ADRDY) == 0);
+    //ADC1->DR &= 0b0;
+    while (ADC1->DR == 0);
+    //lorr1 = lorr1prev;
+    lorr1 = (ADC1->DR);
+    if (2.95*lorr1/4096 >= 1.9){
+      print2("R");
+      //volume = volume - 0;
+    }
+    else if (2.95*lorr1/4096 <= 0.8){
+      print2("L");
+    }
+    else{
+      print2("N");
+    }
+    //lorr1prev = lorr1;
+    //lorr1 = 0;
+    ADC1->CHSELR &= ~ADC_CHSELR_CHSEL2;
+    nano_wait(100000000);
+    //ADC1->CR &= ~ADC_CR_ADDIS;
+    while ((ADC1->ISR & ADC_ISR_ADRDY) == 0);
+    //ADC1->DR &= 0b0;
+    while (ADC1->DR == 0);
+    //lorr1 = lorr1prev;
+    uord2 = (ADC1->DR);
+    if (2.95*uord2/4096 >= 1.9){
+      print3("R");
+      //volume = volume - 0;
+    }
+    else if (2.95*uord2/4096 <= 0.8){
+      print3("L");
+    }
+    else{
+      print3("N");
+    }
+    //lorr1prev = lorr1;
+    //lorr1 = 0;
+    ADC1->CHSELR &= ~ADC_CHSELR_CHSEL3;
+    nano_wait(100000000);
+    //ADC1->CR &= ~ADC_CR_ADDIS;
+    while ((ADC1->ISR & ADC_ISR_ADRDY) == 0);
+    //ADC1->DR &= 0b0;
+    while (ADC1->DR == 0);
+    //lorr1 = lorr1prev;
+    lorr2 = (ADC1->DR);
+    if (2.95*lorr2/4096 >= 1.9){
+      print4("R");
+      //volume = volume - 0;
+    }
+    else if (2.95*lorr2/4096 <= 0.8){
+      print4("L");
+    }
+    else{
+      print4("N");
+    }
+    //lorr1prev = lorr1;
+    //lorr1 = 0;
+    
+    
   }
 #endif
 

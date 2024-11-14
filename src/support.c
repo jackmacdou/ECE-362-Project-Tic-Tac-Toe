@@ -70,6 +70,27 @@ void print(const char str[])
     }
 }
 
+void print1(const char str[])
+{
+    const char *p = str;
+   msg[4] = (4<<8) | font[*p & 0x7f] | (*p & 0x80);
+}
+void print2(const char str[])
+{
+    const char *p = str;
+   msg[5] = (5<<8) | font[*p & 0x7f] | (*p & 0x80);
+}
+void print3(const char str[])
+{
+    const char *p = str;
+   msg[6] = (6<<8) | font[*p & 0x7f] | (*p & 0x80);
+}
+void print4(const char str[])
+{
+    const char *p = str;
+   msg[7] = (7<<8) | font[*p & 0x7f] | (*p & 0x80);
+}
+
 void printfloat(float f)
 {
     printf("here\n");
