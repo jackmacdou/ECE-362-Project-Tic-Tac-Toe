@@ -25,6 +25,67 @@ const char* username = "jwmacdou";
 void nano_wait(int);
 void autotest();
 
+char board [3][3];
+char currentplayer = 'X';
+
+void initboard() {
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      board[i][j] = ' ';
+    }
+  }
+}
+
+int checkwin() {
+  //check rows and columns
+  for (int i = 0; i < 3; i++) {
+    if (board[i][0] == currentplayer && board[i][1] == currentplayer && board[i][2] == currentplayer){
+      return 1; //row win
+    }
+    if (board[0][i] == currentplayer && board[1][i] == currentplayer && board[2][i] == currentplayer){
+      return 1; //column win
+    }
+  }
+  //check diagonals
+  if (board[0][0] == currentplayer && board[1][1] == currentplayer && board[2][2] == currentplayer){
+    return 1;
+  }
+  if (board[0][2] == currentplayer && board[1][1] == currentplayer && board[2][0] == currentplayer){
+    return 1;
+  }
+  return 0;
+}
+
+int checkdraw() {
+  for (int i = 0; i < 3; i++){
+    for (int j = 0; j < 3; j++){
+      if (board[i][j] == ' '){
+        return 0;//no draw
+      }
+    }
+  }
+  return 1; //draw
+}
+
+int playermove(row, column) {
+  if (board[row][column] == ' '){
+    //valid move
+    board[row][column] = currentplayer;
+  }
+  else {
+    //invalid move
+  }
+}
+
+void switchplayer(){
+  if (currentplayer == 'X') {
+    currentplayer = 'O';
+  }
+  else {
+    currentplayer = 'X';
+  }
+}
+
 //=============================================================================
 // Part 1: 7-segment display update with DMA
 //=============================================================================
@@ -399,6 +460,10 @@ uint32_t uord1 = 2048;
 uint32_t lorr1 = 2048;
 uint32_t uord2 = 2048;
 uint32_t lorr2 = 2048;
+int ud1;
+int lr1;
+int ud2;
+int lr2;
 uint32_t uord1prev = 0;
 uint32_t lorr1prev = 0;
 uint32_t uord2prev = 0;
@@ -410,10 +475,18 @@ uint32_t uord2prev = 0;
     //ADC1->CR &= ~ADC_CR_ADDIS;
     //ADC1->CR &= ~ADC_CR_ADSTART;
     //ADC1->CR |= ADC_CR_ADSTART;
-    ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
-    ADC1->CHSELR |= ADC_CHSELR_CHSEL2;
-    ADC1->CHSELR |= ADC_CHSELR_CHSEL3;
-    ADC1->CHSELR |= ADC_CHSELR_CHSEL6;
+    if (currentplayer == 'X'){
+      ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
+      ADC1->CHSELR |= ADC_CHSELR_CHSEL2;
+      ADC1->CHSELR &= ~ADC_CHSELR_CHSEL3;
+      ADC1->CHSELR &= ~ADC_CHSELR_CHSEL6;
+    }
+    else{
+      ADC1->CHSELR &= ~ADC_CHSELR_CHSEL1;
+      ADC1->CHSELR &= ~ADC_CHSELR_CHSEL2;
+      ADC1->CHSELR |= ADC_CHSELR_CHSEL3;
+      ADC1->CHSELR |= ADC_CHSELR_CHSEL6;
+    }
     nano_wait(100000000);
     while ((ADC1->ISR & ADC_ISR_ADRDY) == 0); 
     //ADC1->DR &= 0b0;
@@ -422,13 +495,16 @@ uint32_t uord2prev = 0;
     uord1 = (ADC1->DR);
     if (2.95*uord1/4096 >= 1.9){
       print1("U");
+      ud1 = 0;
       //volume = volume - 0;
     }
     else if (2.95*uord1/4096 <= 0.8){
       print1("D");
+      ud1 = 2;
     }
     else{
       print1("N");
+      ud1 = 1;
     }
     //uord1prev = uord1;
     //uord1 = 0;
@@ -445,13 +521,16 @@ uint32_t uord2prev = 0;
     lorr1 = (ADC1->DR);
     if (2.95*lorr1/4096 >= 1.9){
       print2("R");
+      lr1 = 2;
       //volume = volume - 0;
     }
     else if (2.95*lorr1/4096 <= 0.8){
       print2("L");
+      lr1 = 0;
     }
     else{
       print2("N");
+      lr1 = 1;
     }
     //lorr1prev = lorr1;
     //lorr1 = 0;
@@ -464,14 +543,17 @@ uint32_t uord2prev = 0;
     //lorr1 = lorr1prev;
     uord2 = (ADC1->DR);
     if (2.95*uord2/4096 >= 1.9){
-      print3("R");
+      print3("U");
+      ud2 = 0;
       //volume = volume - 0;
     }
     else if (2.95*uord2/4096 <= 0.8){
-      print3("L");
+      print3("D");
+      ud2 = 2;
     }
     else{
       print3("N");
+      ud2 = 1;
     }
     //lorr1prev = lorr1;
     //lorr1 = 0;
@@ -485,13 +567,16 @@ uint32_t uord2prev = 0;
     lorr2 = (ADC1->DR);
     if (2.95*lorr2/4096 >= 1.9){
       print4("R");
+      lr2 = 2;
       //volume = volume - 0;
     }
     else if (2.95*lorr2/4096 <= 0.8){
       print4("L");
+      lr2 = 0;
     }
     else{
       print4("N");
+      lr2 = 1;
     }
     //lorr1prev = lorr1;
     //lorr1 = 0;
