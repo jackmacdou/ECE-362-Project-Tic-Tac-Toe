@@ -22,11 +22,58 @@ const char* username = "jwmacdou";
 #include <stdint.h>
 #include <stdio.h>
 
+#define SIZE 3
+
 void nano_wait(int);
 void autotest();
 
 char board [3][3];
 char currentplayer = 'X';
+
+/**
+ * @brief Read GPIO port B pin values
+ *
+ * @param pin_num   : Pin number in GPIO B to be read
+ * @return int32_t  : 1: the pin is high; 0: the pin is low
+ */
+int32_t readpin(int32_t pin_num) {
+  int16_t idr = GPIOB->IDR;
+  idr &= 1 << pin_num;
+  if (idr == 0){
+    return 0;
+  }
+  else {
+    return 1;
+  }
+}
+
+void setn(int32_t pin_num, int32_t val) {
+  if (val == 0){
+    GPIOB->BRR |= 1<<(pin_num);
+  }
+  else{
+    GPIOB->BSRR |= 1<<(pin_num);
+  }
+}
+
+int success;
+int buttons(Row, Column) {
+  //setn(8, readpin(0));
+  //setn(9, readpin(4));
+  //check if position is empty
+  success = playermove(Row, Column);
+  if (success == 1){
+    //reset timer
+    //place X or O graphic
+    //Alternate player.
+  }
+  else{
+    //don't reset timer
+    //player remains the same
+    //print invalid move message.
+  }
+  //reset timer
+}
 
 void initboard() {
   for (int i = 0; i < 3; i++) {
@@ -67,24 +114,22 @@ int checkdraw() {
   return 1; //draw
 }
 
-int playermove(row, column) {
-  if (board[row][column] == ' '){
-    //valid move
-    board[row][column] = currentplayer;
+int playermove(char board[SIZE][SIZE], int row, int col, char player) {
+  if (board[row][col] != ' '){
+    return 0;//invalid move
   }
-  else {
-    //invalid move
-  }
+  board[row][col] = player;
+  return 1;//valid move
 }
 
-void switchplayer(){
+/*void switchplayer(){
   if (currentplayer == 'X') {
     currentplayer = 'O';
   }
   else {
     currentplayer = 'X';
   }
-}
+}*/
 
 //=============================================================================
 // Part 1: 7-segment display update with DMA
@@ -469,9 +514,16 @@ uint32_t lorr1prev = 0;
 uint32_t uord2prev = 0;
 #define UDLR
 #ifdef UDLR
+  char board [SIZE][SIZE];
+  int row, col;
+  int turn = 0;
+  char currentplayer;
+
+  initializeBoard(board);
   //volume = 1.3;
   //ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
   for(;;){
+    currentplayer = (turn % 2 == 0) ? 'X' : 'O';
     //ADC1->CR &= ~ADC_CR_ADDIS;
     //ADC1->CR &= ~ADC_CR_ADSTART;
     //ADC1->CR |= ADC_CR_ADSTART;
@@ -480,107 +532,106 @@ uint32_t uord2prev = 0;
       ADC1->CHSELR |= ADC_CHSELR_CHSEL2;
       ADC1->CHSELR &= ~ADC_CHSELR_CHSEL3;
       ADC1->CHSELR &= ~ADC_CHSELR_CHSEL6;
+      nano_wait(100000000);
+      while ((ADC1->ISR & ADC_ISR_ADRDY) == 0); 
+      //ADC1->DR &= 0b0;
+      while (ADC1->DR == 0);
+      //uord1 = uord1prev;
+      uord1 = (ADC1->DR);
+      if (2.95*uord1/4096 >= 1.9){
+        print1("U");
+        ud1 = 0;
+        //volume = volume - 0;
+      }
+      else if (2.95*uord1/4096 <= 0.8){
+        print1("D");
+        ud1 = 2;
+      }
+      else{
+        print1("N");
+        ud1 = 1;
+      }
+      //uord1prev = uord1;
+      //uord1 = 0;
+      ADC1->CHSELR &= ~ADC_CHSELR_CHSEL1;
+      //ADC1->CR |= ADC_CR_ADDIS;
+      //ADC1->CR &= ~ADC_CR_ADSTART;
+      //ADC1->CR |= ADC_CR_ADSTART;
+      nano_wait(100000000);
+      //ADC1->CR &= ~ADC_CR_ADDIS;
+      while ((ADC1->ISR & ADC_ISR_ADRDY) == 0);
+      //ADC1->DR &= 0b0;
+      while (ADC1->DR == 0);
+      //lorr1 = lorr1prev;
+      lorr1 = (ADC1->DR);
+      if (2.95*lorr1/4096 >= 1.9){
+        print2("R");
+        lr1 = 2;
+        //volume = volume - 0;
+      }
+      else if (2.95*lorr1/4096 <= 0.8){
+        print2("L");
+        lr1 = 0;
+      }
+      else{
+        print2("N");
+        lr1 = 1;
+      }
+      //lorr1prev = lorr1;
+      //lorr1 = 0;
+      ADC1->CHSELR &= ~ADC_CHSELR_CHSEL2;
     }
     else{
       ADC1->CHSELR &= ~ADC_CHSELR_CHSEL1;
       ADC1->CHSELR &= ~ADC_CHSELR_CHSEL2;
       ADC1->CHSELR |= ADC_CHSELR_CHSEL3;
       ADC1->CHSELR |= ADC_CHSELR_CHSEL6;
+      nano_wait(100000000);
+      //ADC1->CR &= ~ADC_CR_ADDIS;
+      while ((ADC1->ISR & ADC_ISR_ADRDY) == 0);
+      //ADC1->DR &= 0b0;
+      while (ADC1->DR == 0);
+      //lorr1 = lorr1prev;
+      uord2 = (ADC1->DR);
+      if (2.95*uord2/4096 >= 1.9){
+        print3("U");
+        ud2 = 0;
+        //volume = volume - 0;
+      }
+      else if (2.95*uord2/4096 <= 0.8){
+        print3("D");
+        ud2 = 2;
+      }
+      else{
+        print3("N");
+        ud2 = 1;
+      }
+      //lorr1prev = lorr1;
+      //lorr1 = 0;
+      ADC1->CHSELR &= ~ADC_CHSELR_CHSEL3;
+      nano_wait(100000000);
+      //ADC1->CR &= ~ADC_CR_ADDIS;
+      while ((ADC1->ISR & ADC_ISR_ADRDY) == 0);
+      //ADC1->DR &= 0b0;
+      while (ADC1->DR == 0);
+      //lorr1 = lorr1prev;
+      lorr2 = (ADC1->DR);
+      if (2.95*lorr2/4096 >= 1.9){
+        print4("R");
+        lr2 = 2;
+        //volume = volume - 0;
+      }
+      else if (2.95*lorr2/4096 <= 0.8){
+        print4("L");
+        lr2 = 0;
+      }
+      else{
+        print4("N");
+        lr2 = 1;
+      }
+      //lorr1prev = lorr1;
+      //lorr1 = 0;
     }
-    nano_wait(100000000);
-    while ((ADC1->ISR & ADC_ISR_ADRDY) == 0); 
-    //ADC1->DR &= 0b0;
-    while (ADC1->DR == 0);
-    //uord1 = uord1prev;
-    uord1 = (ADC1->DR);
-    if (2.95*uord1/4096 >= 1.9){
-      print1("U");
-      ud1 = 0;
-      //volume = volume - 0;
-    }
-    else if (2.95*uord1/4096 <= 0.8){
-      print1("D");
-      ud1 = 2;
-    }
-    else{
-      print1("N");
-      ud1 = 1;
-    }
-    //uord1prev = uord1;
-    //uord1 = 0;
-    ADC1->CHSELR &= ~ADC_CHSELR_CHSEL1;
-    //ADC1->CR |= ADC_CR_ADDIS;
-    //ADC1->CR &= ~ADC_CR_ADSTART;
-    //ADC1->CR |= ADC_CR_ADSTART;
-    nano_wait(100000000);
-    //ADC1->CR &= ~ADC_CR_ADDIS;
-    while ((ADC1->ISR & ADC_ISR_ADRDY) == 0);
-    //ADC1->DR &= 0b0;
-    while (ADC1->DR == 0);
-    //lorr1 = lorr1prev;
-    lorr1 = (ADC1->DR);
-    if (2.95*lorr1/4096 >= 1.9){
-      print2("R");
-      lr1 = 2;
-      //volume = volume - 0;
-    }
-    else if (2.95*lorr1/4096 <= 0.8){
-      print2("L");
-      lr1 = 0;
-    }
-    else{
-      print2("N");
-      lr1 = 1;
-    }
-    //lorr1prev = lorr1;
-    //lorr1 = 0;
-    ADC1->CHSELR &= ~ADC_CHSELR_CHSEL2;
-    nano_wait(100000000);
-    //ADC1->CR &= ~ADC_CR_ADDIS;
-    while ((ADC1->ISR & ADC_ISR_ADRDY) == 0);
-    //ADC1->DR &= 0b0;
-    while (ADC1->DR == 0);
-    //lorr1 = lorr1prev;
-    uord2 = (ADC1->DR);
-    if (2.95*uord2/4096 >= 1.9){
-      print3("U");
-      ud2 = 0;
-      //volume = volume - 0;
-    }
-    else if (2.95*uord2/4096 <= 0.8){
-      print3("D");
-      ud2 = 2;
-    }
-    else{
-      print3("N");
-      ud2 = 1;
-    }
-    //lorr1prev = lorr1;
-    //lorr1 = 0;
-    ADC1->CHSELR &= ~ADC_CHSELR_CHSEL3;
-    nano_wait(100000000);
-    //ADC1->CR &= ~ADC_CR_ADDIS;
-    while ((ADC1->ISR & ADC_ISR_ADRDY) == 0);
-    //ADC1->DR &= 0b0;
-    while (ADC1->DR == 0);
-    //lorr1 = lorr1prev;
-    lorr2 = (ADC1->DR);
-    if (2.95*lorr2/4096 >= 1.9){
-      print4("R");
-      lr2 = 2;
-      //volume = volume - 0;
-    }
-    else if (2.95*lorr2/4096 <= 0.8){
-      print4("L");
-      lr2 = 0;
-    }
-    else{
-      print4("N");
-      lr2 = 1;
-    }
-    //lorr1prev = lorr1;
-    //lorr1 = 0;
-    
     
   }
 #endif
