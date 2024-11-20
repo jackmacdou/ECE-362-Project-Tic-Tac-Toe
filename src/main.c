@@ -103,7 +103,18 @@ int checkwin() {
   return 0;
 }
 
-int checkdraw() {
+int checkdraw(char board[SIZE][SIZE]) {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            if (board[i][j] == ' ') {
+                return 0;  // Board is not full
+            }
+        }
+    }
+    return 1;  // Board is full
+}
+
+/*int checkdraw() {
   for (int i = 0; i < 3; i++){
     for (int j = 0; j < 3; j++){
       if (board[i][j] == ' '){
@@ -112,7 +123,7 @@ int checkdraw() {
     }
   }
   return 1; //draw
-}
+}*/
 
 int playermove(char board[SIZE][SIZE], int row, int col, char player) {
   if (board[row][col] != ' '){
@@ -145,6 +156,70 @@ void print(const char str[]);
 // Print a floating-point value.
 void printfloat(float f);
 
+//SPI DISPLAY FUNCTIONS
+
+void init_spi1() {
+    RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+    RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
+    GPIOA->MODER &= ~0xC000CC00;
+    GPIOA->MODER |= 0x80008800;
+    GPIOA->AFR[1] &= ~(0b1111<<28);
+    GPIOA->AFR[0] &= ~(0b1111<<20);
+    GPIOA->AFR[0] &= ~(0b1111<<28);
+    SPI1->CR1 &= ~SPI_CR1_SPE;
+    SPI1->CR2 = 0b1001<<8;
+    //SPI1->CR2 &= 0b0000<<8;
+    
+    //RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
+    SPI1->CR2 |= SPI_CR2_SSOE;
+    SPI1->CR2 |= SPI_CR2_NSSP;
+    SPI1->CR2 |= SPI_CR2_TXDMAEN;
+    SPI1->CR1 |= 0b111<<3;
+    SPI1->CR1 |= SPI_CR1_MSTR;
+    SPI1->CR1 |= SPI_CR1_SPE;
+}
+
+void spi_cmd(unsigned int data) {
+    //RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
+    while ((SPI1->SR&SPI_SR_TXE) == 0){
+
+    }
+    SPI1->DR = data;
+}
+
+void spi1_init_oled() {
+    nano_wait(1000000);
+    spi_cmd(0x38);
+    nano_wait(600000);
+    spi_cmd(0x08);
+    nano_wait(600000);
+    spi_cmd(0x01);
+    nano_wait(2000000);
+    spi_cmd(0x06);
+    nano_wait(600000);
+    spi_cmd(0x02);
+    nano_wait(600000);
+    spi_cmd(0x0c);
+}
+
+void spi1_display1(const char *string) {
+    //move cursor to home position
+    spi_cmd (0x02);
+    //for each character in the string
+    while (*string != '\0'){
+        spi_data(*string);
+        string++;
+    }
+}
+void spi1_display2(const char *string) {
+    //move the cursor to the second row (0xc0)
+    spi_cmd (0xc0);
+    //for each character in the string
+    while (*string != '\0'){
+        spi_data(*string);
+        string++;
+    }
+}
 
 //============================================================================
 // enable_ports()
@@ -153,7 +228,7 @@ void enable_ports(void) {
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
     GPIOB->MODER &= ~0x3FFFFF;
-    GPIOB->MODER |= 0x155555;
+    GPIOB->MODER |= 0x155554;
     GPIOC->OTYPER |= 0b1111<<4;
     GPIOC->MODER &= ~0xFFFF;
     GPIOC->MODER |= 0b01<<14;
@@ -442,6 +517,42 @@ void init_tim6(void) {
   TIM6->CR2 |= TIM_CR2_MMS_1;
 }
 
+void printtime(int time) {
+  if (time == 10){
+    spi1_display2("10");
+  }
+  else if (time == 9){
+    spi1_display2("9");
+  }
+  else if (time == 8){
+    spi1_display2("8");
+  }
+  else if (time == 7){
+    spi1_display2("7");
+  }
+  else if (time == 6){
+    spi_display2("6");
+  }
+  else if (time == 5){
+    spi_display2("5");
+  }
+  else if (time == 4){
+    spi_display2("4");
+  }
+  else if(time == 3){
+    spi_display2("3");
+  }
+  else if(time == 2){
+    spi_display2("2");
+  }
+  else if(time == 1){
+    spi_display2("1");
+  }
+  else{
+    spi_display2("0");
+  }
+}
+
 //============================================================================
 // All the things you need to test your subroutines.
 //============================================================================
@@ -465,6 +576,13 @@ int main(void) {
     setup_dma();
     enable_dma();
     init_tim15();
+    #define SPI_OLED
+    #if defined(SPI_OLED)
+    init_spi1();
+    spi1_init_oled();
+    spi1_display1("Hello again,"); //REMOVE LATER, THIS IS JUST FOR SPI DISPLAY TESTING
+    spi1_display2(username); //THIS ONE NEEDS TO BE REMOVED, TOO.
+    #endif
 
     // Comment this for-loop before you demo part 1!
     // Uncomment this loop to see if "ECE 362" is displayed on LEDs.
@@ -518,30 +636,45 @@ uint32_t uord2prev = 0;
   int row, col;
   int turn = 0;
   char currentplayer;
-
+  int time = 10;
+  int tencount = 0;
+  int timemilli = 0;
+  int tx = 0;
+  int to = 0;
   initializeBoard(board);
   //volume = 1.3;
   //ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
   for(;;){
+    if (turn == 2){
+      turn = 0;
+    }
     currentplayer = (turn % 2 == 0) ? 'X' : 'O';
-    //ADC1->CR &= ~ADC_CR_ADDIS;
-    //ADC1->CR &= ~ADC_CR_ADSTART;
-    //ADC1->CR |= ADC_CR_ADSTART;
+    //inputs
     if (currentplayer == 'X'){
+      if (tx == 0){
+        spi1_display1("Player X Turn");
+        tx = 1;
+      }
+          if (time == 0){
+      spi1_display1("Player O Wins!")
+      return 0;
+      }
+      if (tencount == 0){
+      printtime(10);
+      tencount = 1;
+      }
       ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
       ADC1->CHSELR |= ADC_CHSELR_CHSEL2;
-      ADC1->CHSELR &= ~ADC_CHSELR_CHSEL3;
-      ADC1->CHSELR &= ~ADC_CHSELR_CHSEL6;
+      //ADC1->CHSELR &= ~ADC_CHSELR_CHSEL3;
+      //ADC1->CHSELR &= ~ADC_CHSELR_CHSEL6;
       nano_wait(100000000);
+      timemilli++;//increase millisecond counter
       while ((ADC1->ISR & ADC_ISR_ADRDY) == 0); 
-      //ADC1->DR &= 0b0;
       while (ADC1->DR == 0);
-      //uord1 = uord1prev;
       uord1 = (ADC1->DR);
       if (2.95*uord1/4096 >= 1.9){
         print1("U");
         ud1 = 0;
-        //volume = volume - 0;
       }
       else if (2.95*uord1/4096 <= 0.8){
         print1("D");
@@ -551,23 +684,20 @@ uint32_t uord2prev = 0;
         print1("N");
         ud1 = 1;
       }
-      //uord1prev = uord1;
-      //uord1 = 0;
       ADC1->CHSELR &= ~ADC_CHSELR_CHSEL1;
-      //ADC1->CR |= ADC_CR_ADDIS;
-      //ADC1->CR &= ~ADC_CR_ADSTART;
-      //ADC1->CR |= ADC_CR_ADSTART;
       nano_wait(100000000);
-      //ADC1->CR &= ~ADC_CR_ADDIS;
+      timemilli++;//increase millisecond counter
+      if (timemilli == 10){
+        time = time - 1;
+        printtime(time);
+        timemilli = 0;
+      }
       while ((ADC1->ISR & ADC_ISR_ADRDY) == 0);
-      //ADC1->DR &= 0b0;
       while (ADC1->DR == 0);
-      //lorr1 = lorr1prev;
       lorr1 = (ADC1->DR);
       if (2.95*lorr1/4096 >= 1.9){
         print2("R");
         lr1 = 2;
-        //volume = volume - 0;
       }
       else if (2.95*lorr1/4096 <= 0.8){
         print2("L");
@@ -577,17 +707,48 @@ uint32_t uord2prev = 0;
         print2("N");
         lr1 = 1;
       }
-      //lorr1prev = lorr1;
-      //lorr1 = 0;
-      ADC1->CHSELR &= ~ADC_CHSELR_CHSEL2;
+      if (readpin(0) == 1){//if the button is pushed
+        if (makeMove(board, ud1, lr1, currentplayer)){//check if move is valid
+          //print X on board graphic
+          turn++;//update turn
+          while (readpin(0) == 1);//wait for button to be released
+          tx = 0;
+          time = 10;
+          tencount = 0;
+          timemilli = 0;//reset timer
+          if (checkwin(board, currentplayer)){//check if X won
+            spi1_display1("Player X Wins!");
+            return 0;
+          }
+          if (checkdraw(board)){//check if board full
+            spi1_display1("Draw!");
+            return 0;
+          }
+        }
+        else{//invalid move
+          spi1_display1("Invalid move!");
+        }
+      }
     }
     else{
+      if (time == 0){
+        spi1_display1("Player X Wins!")
+        return 0;
+      }
+      if (tencount == 0){
+        printtime(10);
+        tencount = 1;
+      }
+      if (to == 0){
+        spi1_display1("Player O Turn");
+        to = 1;
+      }
       ADC1->CHSELR &= ~ADC_CHSELR_CHSEL1;
       ADC1->CHSELR &= ~ADC_CHSELR_CHSEL2;
       ADC1->CHSELR |= ADC_CHSELR_CHSEL3;
       ADC1->CHSELR |= ADC_CHSELR_CHSEL6;
       nano_wait(100000000);
-      //ADC1->CR &= ~ADC_CR_ADDIS;
+      timemilli++;//increase millisecond counter
       while ((ADC1->ISR & ADC_ISR_ADRDY) == 0);
       //ADC1->DR &= 0b0;
       while (ADC1->DR == 0);
@@ -610,7 +771,12 @@ uint32_t uord2prev = 0;
       //lorr1 = 0;
       ADC1->CHSELR &= ~ADC_CHSELR_CHSEL3;
       nano_wait(100000000);
-      //ADC1->CR &= ~ADC_CR_ADDIS;
+      timemilli++;//increase millisecond counter
+      if (timemilli == 10){
+        time = time - 1;
+        printtime(time);
+        timemilli = 0;
+      }
       while ((ADC1->ISR & ADC_ISR_ADRDY) == 0);
       //ADC1->DR &= 0b0;
       while (ADC1->DR == 0);
@@ -631,11 +797,34 @@ uint32_t uord2prev = 0;
       }
       //lorr1prev = lorr1;
       //lorr1 = 0;
+      if (readpin(0) == 1){//if the button is pushed
+        if (makeMove(board, ud2, lr2, currentplayer)){//check if move is valid
+          //print X on board graphic
+          turn++;//update turn
+          while (readpin(0) == 1);//wait for button to be released
+          to = 0;
+          time = 10;
+          tencount = 0;
+          timemilli = 0;//reset timer
+          if (checkwin(board, currentplayer)){//check if O won
+            spi1_display1("Player O Wins!");
+            return 0;
+          }
+          if (checkdraw(board)){//check if board full
+            spi1_display1("Draw!");
+            return 0;
+          }
+        }
+        else{//invalid move
+          spi1_display1("Invalid move!");
+        }
+      }
     }
     
   }
 #endif
-
+}
+/*
     init_wavetable();
     setup_dac();
     init_tim6();
@@ -663,3 +852,4 @@ uint32_t uord2prev = 0;
     // Have fun.
     //dialer();
 }
+*/
