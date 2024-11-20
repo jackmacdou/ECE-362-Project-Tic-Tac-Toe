@@ -709,7 +709,7 @@ uint32_t uord2prev = 0;
             return 0;
           }
           if (checkdraw(board)){//check if board full
-            spi1_display1("Draw!");
+            spi1_display1("Draw!          ");
             return 0;
           }
         }
