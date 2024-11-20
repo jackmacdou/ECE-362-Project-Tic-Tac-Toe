@@ -57,7 +57,7 @@ void setn(int32_t pin_num, int32_t val) {
 }
 
 int success;
-int buttons(Row, Column) {
+/*int buttons(Row, Column) {
   //setn(8, readpin(0));
   //setn(9, readpin(4));
   //check if position is empty
@@ -73,17 +73,18 @@ int buttons(Row, Column) {
     //print invalid move message.
   }
   //reset timer
-}
+}*/
 
-void initboard() {
+char initboard() {
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
       board[i][j] = ' ';
     }
   }
+  return board;
 }
 
-int checkwin() {
+int checkwin(char board[SIZE][SIZE]) {
   //check rows and columns
   for (int i = 0; i < 3; i++) {
     if (board[i][0] == currentplayer && board[i][1] == currentplayer && board[i][2] == currentplayer){
@@ -219,6 +220,9 @@ void spi1_display2(const char *string) {
         spi_data(*string);
         string++;
     }
+}
+void spi_data(unsigned int data) {
+    spi_cmd(0x200 | data);
 }
 
 //============================================================================
@@ -522,7 +526,7 @@ void printtime(int time) {
     spi1_display2("10");
   }
   else if (time == 9){
-    spi1_display2("9");
+    spi1_display2("9 ");
   }
   else if (time == 8){
     spi1_display2("8");
@@ -531,25 +535,25 @@ void printtime(int time) {
     spi1_display2("7");
   }
   else if (time == 6){
-    spi_display2("6");
+    spi1_display2("6");
   }
   else if (time == 5){
-    spi_display2("5");
+    spi1_display2("5");
   }
   else if (time == 4){
-    spi_display2("4");
+    spi1_display2("4");
   }
   else if(time == 3){
-    spi_display2("3");
+    spi1_display2("3");
   }
   else if(time == 2){
-    spi_display2("2");
+    spi1_display2("2");
   }
   else if(time == 1){
-    spi_display2("1");
+    spi1_display2("1");
   }
   else{
-    spi_display2("0");
+    spi1_display2("0");
   }
 }
 
@@ -578,10 +582,9 @@ int main(void) {
     init_tim15();
     #define SPI_OLED
     #if defined(SPI_OLED)
-    init_spi1();
-    spi1_init_oled();
-    spi1_display1("Hello again,"); //REMOVE LATER, THIS IS JUST FOR SPI DISPLAY TESTING
-    spi1_display2(username); //THIS ONE NEEDS TO BE REMOVED, TOO.
+
+    //spi1_display1("Hello again,"); //REMOVE LATER, THIS IS JUST FOR SPI DISPLAY TESTING
+    //spi1_display2(username); //THIS ONE NEEDS TO BE REMOVED, TOO.
     #endif
 
     // Comment this for-loop before you demo part 1!
@@ -593,32 +596,11 @@ int main(void) {
 
     // Demonstrate part 1
   //#define SCROLL_DISPLAY
-#ifdef SCROLL_DISPLAY
-    for(;;)
-        for(int i=0; i<8; i++) {
-            print(&"Hello...Hello..."[i]);
-            nano_wait(250000000);
-        }
-#endif
-
     init_tim7();
-
-    // Demonstrate part 2
-//#define SHOW_KEY_EVENTS
-#ifdef SHOW_KEY_EVENTS
-    show_keys();
-#endif
-
     setup_adc();
     init_tim2();
-
-    // Demonstrate part 3
-//#define SHOW_VOLTAGE
-#ifdef SHOW_VOLTAGE
-    for(;;) {
-        printfloat((2.95 * volume / 4096)/10000);
-    }
-#endif
+    init_spi1();
+    spi1_init_oled();
 uint32_t uord1 = 2048;
 uint32_t lorr1 = 2048;
 uint32_t uord2 = 2048;
@@ -641,7 +623,13 @@ uint32_t uord2prev = 0;
   int timemilli = 0;
   int tx = 0;
   int to = 0;
-  initializeBoard(board);
+  //initboard(board);
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      board[i][j] = ' ';
+    }
+  }
+  //return board;
   //volume = 1.3;
   //ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
   for(;;){
@@ -656,7 +644,7 @@ uint32_t uord2prev = 0;
         tx = 1;
       }
           if (time == 0){
-      spi1_display1("Player O Wins!")
+      spi1_display1("Player O Wins!");
       return 0;
       }
       if (tencount == 0){
@@ -708,7 +696,7 @@ uint32_t uord2prev = 0;
         lr1 = 1;
       }
       if (readpin(0) == 1){//if the button is pushed
-        if (makeMove(board, ud1, lr1, currentplayer)){//check if move is valid
+        if (playermove(board, ud1, lr1, currentplayer)){//check if move is valid
           //print X on board graphic
           turn++;//update turn
           while (readpin(0) == 1);//wait for button to be released
@@ -716,7 +704,7 @@ uint32_t uord2prev = 0;
           time = 10;
           tencount = 0;
           timemilli = 0;//reset timer
-          if (checkwin(board, currentplayer)){//check if X won
+          if (checkwin(board)){//check if X won
             spi1_display1("Player X Wins!");
             return 0;
           }
@@ -732,7 +720,7 @@ uint32_t uord2prev = 0;
     }
     else{
       if (time == 0){
-        spi1_display1("Player X Wins!")
+        spi1_display1("Player X Wins!");
         return 0;
       }
       if (tencount == 0){
@@ -798,7 +786,7 @@ uint32_t uord2prev = 0;
       //lorr1prev = lorr1;
       //lorr1 = 0;
       if (readpin(0) == 1){//if the button is pushed
-        if (makeMove(board, ud2, lr2, currentplayer)){//check if move is valid
+        if (playermove(board, ud2, lr2, currentplayer)){//check if move is valid
           //print X on board graphic
           turn++;//update turn
           while (readpin(0) == 1);//wait for button to be released
@@ -806,7 +794,7 @@ uint32_t uord2prev = 0;
           time = 10;
           tencount = 0;
           timemilli = 0;//reset timer
-          if (checkwin(board, currentplayer)){//check if O won
+          if (checkwin(board)){//check if O won
             spi1_display1("Player O Wins!");
             return 0;
           }
